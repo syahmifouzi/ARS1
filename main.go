@@ -70,8 +70,6 @@ func main() {
 	fmt.Println(obsX)
 	fmt.Println(normalizer.mean)
 
-	var c = [][]float64{{2, 0.01, 0.011, 0.005, 1e-3}}
-	fmt.Println(clipMin(c, 1e-2))
 }
 
 func randomizeValue(r int, c int) [][]float64 {

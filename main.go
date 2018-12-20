@@ -17,6 +17,11 @@ type Normalizer struct {
 	n, mean, meanDiff, variance [][]float64
 }
 
+// Policy is the AI
+type Policy struct {
+	theta [][]float64
+}
+
 func (hp *Hp) init() {
 	(*hp).nbSteps = 3
 	(*hp).episodeLength = 1000
@@ -47,34 +52,119 @@ func (nm *Normalizer) observe(x [][]float64) {
 	(*nm).variance = variance1
 }
 
+func (nm *Normalizer) normalize(inputs [][]float64) [][]float64 {
+	obsMean := (*nm).mean
+	obsStd := sqrt((*nm).variance)
+	r1 := tolak(inputs, obsMean)
+	r1 = bahagi(r1, obsStd)
+	return r1
+}
+
+func (p *Policy) init(inputSize, outputSize int) {
+	(*p).theta = zeros(outputSize, inputSize)
+}
+
+func (p *Policy) evaluate(input, delta [][]float64, direction string, hp Hp) [][]float64 {
+	switch direction {
+	case "none":
+		return dot(input, (*p).theta)
+	case "positive":
+		r := darabN(delta, hp.noise)
+		r = tambah((*p).theta, r)
+		return dot(input, transpose(r))
+	default:
+		r := darabN(delta, hp.noise)
+		r = tolak((*p).theta, r)
+		return dot(input, transpose(r))
+	}
+}
+
+func (p *Policy) sampleDeltas(inputSize, outputSize int, hp Hp) [][][]float64 {
+	var r [][][]float64
+	for i := 0; i < hp.nbDirection; i++ {
+		r = append(r, randomizeValue(outputSize, inputSize))
+	}
+	return r
+}
+
+func (p *Policy) update(inputSize, outputSize int) {
+
+}
+
+func train(hp Hp, p Policy) {
+	for step := 0; step < hp.nbSteps; step++ {
+		// Initializing the pertubation deltas and the positive/negative rewards
+		deltas := p.sampleDeltas(nbInputs, nbOutputs, hp)
+		positiveRewards := zeros(1, hp.nbDirections)
+		negativeRewards := zeros(1, hp.nbDirections)
+
+		// Getting the positive rewards in the positive directions
+
+	}
+}
+
 func main() {
 
 	// hp := Hp{3, 1000, 16, 16, 0.02, 0.03}
 	hp := Hp{}
 	hp.init()
 	var nbInputs = 26
-	// var nbOutputs = 6
+	var nbOutputs = 6
 	normalizer := Normalizer{}
 	normalizer.init(nbInputs)
-	var t = [][]float64{{1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946, 1946}}
-	var obsX = [][]float64{{-0.37217143, 0, 1, -0.09059525, 0, -0.22512761, -0, 0.20056544, -1.0016325, 0.00776637, 0.99232435, -0.2003869, -0.628246, -0.170416, 0.9583321, 0.49078256, -0.9765263, -0.9874402, 0.5839385, -0.76016766, 1, 0, 0, 1, 0, 0}}
-	var m = [][]float64{{-0.13214317, 0, 1, 0.01003288, 0, -0.29618214, 0, 0.03329143, -0.39944838, -0.07498753, 0.22818663, 0.15161639, -0.50259944, -0.07528869, 0.45088952, 0.14550787, -0.11147567, -0.20242724, 0.95710938, -0.39256057, 0.34069887, 0, 0, 0.52723535, 0, 0}}
 
-	normalizer.n = t
-	normalizer.mean = m
+	var input = [][]float64{{-0.27056041, 0., 0., -0.20892696, 0., 0.17776233,
+		-0., 0.31310795, 0.35891473, -0.06750051, -0.4259459, 0.01321563,
+		0.45592347, -0.08710772, 0.27216179, -0.09448055, 0.32598927, -0.07648785,
+		-0.25519671, 0.17547957, 0.33333333, 0.46534397, 0.41015156, 0.12751534,
+		-0.15681251, 0.34433738}}
 
-	normalizer.observe(obsX)
+	var delta = [][]float64{{-0.80217284, -0.44887781, -1.10593508, -1.65451545, -2.3634686, 1.13534535,
+		-1.01701414, 0.63736181, -0.85990661, 1.77260763, -1.11036305, 0.18121427,
+		0.56434487, -0.56651023, 0.7299756, 0.37299379, 0.53381091, -0.0919733,
+		1.91382039, 0.33079713, 1.14194252, -1.12959516, -0.85005238, 0.96082,
+		-0.21741818, 0.15851488},
+		{0.87341823, -0.11138337, -1.03803876, -1.00947983, -1.05825656, 0.65628408,
+			-0.06249159, -1.73865429, 0.103163, -0.62166685, 0.27571804, -1.09067489,
+			-0.60998525, 0.30641238, 1.69182613, -0.74795374, -0.58079722, -0.11075397,
+			2.04202875, 0.44752069, 0.68338423, 0.02288597, 0.85723427, 0.18393058,
+			-0.41611158, 1.25005005},
+		{1.24829979, -0.75767414, 0.58829416, 0.34685933, 1.3670327, 0.67371607,
+			-1.2915627, -0.84824392, -0.16659957, 0.91719602, 0.08025059, 0.22823877,
+			-0.8804768, 0.27812885, -0.07015677, 0.62958793, -1.81342356, 1.54744858,
+			0.32505743, -0.21191292, -1.54672407, 1.04520063, 1.01037548, 0.07083664,
+			0.71758983, -0.25070491},
+		{-0.05152993, 0.01312891, 0.20223906, 0.45495224, -0.39926817, 0.18106742,
+			0.80748795, 0.81253519, 0.21090203, 0.42177915, 0.58192518, -0.41020752,
+			2.2968661, 1.68849705, 0.62581147, -1.61136381, 0.06009774, 0.46242079,
+			0.68483649, -0.59546033, 0.99905124, -0.30817074, 0.36583834, 1.60750704,
+			-0.23817737, -0.34082828},
+		{0.48759421, 1.73907303, 0.0689698, 0.47324139, -0.65035502, -0.77910696,
+			-0.77766271, 0.6225628, 0.42756207, 0.0740096, -0.4531686, 0.60415364,
+			2.38520581, -0.12388333, -0.32419367, 0.31075423, 2.46162831, -0.31612369,
+			-1.81506277, 0.6842495, 0.03203253, 0.19627021, 0.90745116, -2.13483482,
+			0.81684718, 1.18417131},
+		{-0.20448056, -0.11084446, 1.41448273, -1.416645, 0.67351346, -0.77229442,
+			-0.09387704, -0.16977402, -0.54114463, 0.53794761, 0.39128265, 2.21191487,
+			-0.16224463, 0.29117816, 0.10806266, -0.19953292, 0.2328323, 0.15539326,
+			0.59372515, -1.35055772, 0.83056467, 0.11321804, -1.24274572, 1.59948307,
+			2.47441941, -0.33232485}}
 
-	fmt.Println(hp.nbSteps)
-	fmt.Println(normalizer.n)
-	fmt.Println(obsX)
-	fmt.Println(normalizer.mean)
+	direction := "positive"
+
+	p := Policy{}
+	p.init(nbInputs, nbOutputs)
+	r := p.evaluate(input, delta, direction, hp)
+	fmt.Println("action: ", r)
+	train(hp, p)
 
 }
 
 func randomizeValue(r int, c int) [][]float64 {
-	//we are seeding the rand variable with present time
-	//so that we would get different output each time
+	// we are seeding the rand variable with present time
+	// or use crypto/rand for more secure way
+	// https://gobyexample.com/random-numbers
+	// so that we would get different output each time
 	// rand.Seed(time.Now().UnixNano())
 	// OR WE CAN JUST CONSTANT IT FOR NOW!
 	rand.Seed(0)
@@ -265,6 +355,22 @@ func darab(m1 [][]float64, m2 [][]float64) [][]float64 {
 	return product
 }
 
+func darabN(m1 [][]float64, n float64) [][]float64 {
+
+	product := make([][]float64, len(m1))
+	for i := 0; i < len(m1); i++ {
+		product[i] = make([]float64, len(m1[0]))
+	}
+
+	for i, v := range m1 {
+		for i2, v2 := range v {
+			product[i][i2] = v2 * n
+		}
+	}
+
+	return product
+}
+
 func bahagi(m1 [][]float64, m2 [][]float64) [][]float64 {
 
 	division := make([][]float64, len(m1))
@@ -339,10 +445,8 @@ func clipMin(m1 [][]float64, x float64) [][]float64 {
 	for i, v := range m1 {
 		for i2, v2 := range v {
 			if v2 < x {
-				fmt.Println("IF")
 				clip[i][i2] = x
 			} else {
-				fmt.Println("ELSE")
 				clip[i][i2] = v2
 			}
 		}
@@ -365,6 +469,22 @@ func transpose(m1 [][]float64) [][]float64 {
 	}
 
 	return mT
+}
+
+func sqrt(m1 [][]float64) [][]float64 {
+
+	s := make([][]float64, len(m1))
+	for i := 0; i < len(m1); i++ {
+		s[i] = make([]float64, len(m1[0]))
+	}
+
+	for i, v := range m1 {
+		for i2, v2 := range v {
+			s[i][i2] = math.Sqrt(v2)
+		}
+	}
+
+	return s
 }
 
 func softmax(m1 [][]float64) [][]float64 {

@@ -14,7 +14,7 @@ class Hp():
     def __init__(self):
         self.nb_steps = 3
         # Max time we allow for the AI to walk on the field (free to try an error)
-        self.episode_length = 1000
+        self.episode_length = 500
         self.learning_rate = 0.02
         # The more directions, the higher chance of reward, but with a longer time to train
         self.nb_directions = 16
@@ -46,8 +46,13 @@ class Normalizer():
         self.var = (self.mean_diff / self.n).clip(min = 1e-2)
         
     def normalize(self, inputs):
+        ## print('mean: ', self.mean)
+        ## print('var: ', self.var)
+        ## print('inputs: ', inputs)
         obs_mean = self.mean
         obs_std = np.sqrt(self.var)
+        ## print('obs_std: ', obs_std)
+        ## print('return: ', (inputs - obs_mean) / obs_std)
         return (inputs - obs_mean) / obs_std
     
 # Building the AI
@@ -68,7 +73,7 @@ class Policy():
             return (self.theta - hp.noise*delta).dot(input)
         
     def sample_deltas(self):
-        # print('policy.sample_deltas(): ', [np.random.randn(*self.theta.shape) for _ in range(hp.nb_directions)])
+        ## print('policy.sample_deltas(): ', [np.random.randn(*self.theta.shape) for _ in range(hp.nb_directions)])
         # First we put randn for array of size self.theta (Look at init),
         # Then we apply the same thing for 16 times (because our  positive direction is 16)
         # Then another 16 for negative direction, but we will use the same value as positive direction
@@ -77,6 +82,7 @@ class Policy():
     
     def update(self, rollouts, sigma_r):
         step = np.zeros(self.theta.shape)
+        print('rollouts: ', rollouts)
         for r_pos, r_neg, d in rollouts:
             step += (r_pos - r_neg) * d
         self.theta += hp.learning_rate / (hp.nb_best_directions * sigma_r) * step
@@ -97,7 +103,7 @@ def explore(env, normalizer, policy, direction = None, delta = None):
         normalizer.observe(state)
         state = normalizer.normalize(state)
         action = policy.evaluate(state, delta, direction)
-        print('action: ', action)
+        ## print('action: ', action)
         # This pybullet library will return the next state, reward, is the episode is done, and 1 more...
         state, reward, done, _ = env.step(action)
         ## print('state AFTER: ', state)

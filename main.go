@@ -113,6 +113,11 @@ func train(hp Hp, p Policy) {
 		// Gathering all the positive/negative rewards to compute the standard deviation of these rewards
 		// Concat both into 1 array
 		// allRewards := concatArr(positiveRewards, negativeRewards)
+		// go lib for std might be a bit different than python
+		// sigmaR := std(allRewards)
+
+		// Sorting the rollouts by the max(r_pos, r_neg) and selecting the best directions
+
 	}
 }
 
@@ -257,17 +262,7 @@ func zerosAlpha(r int, c int) [][]float64 {
 }
 
 func std(m1 [][]float64) float64 {
-	// var sum, mean, sd, d float64
-	// for _, v := range m1[0] {
-	// 	fmt.Println("value of v:", v)
-	// 	sum += v
-	// 	d++
-	// }
-	// mean = sum / d
-	// for _, v := range m1[0] {
-	// 	sd += math.Pow(v-mean, 2)
-	// }
-
+	// https://www.gonum.org/post/intro-to-stats-with-gonum/
 	// mean := stat.Mean(m1[0], nil)
 	variance := stat.Variance(m1[0], nil)
 	stddev := math.Sqrt(variance)

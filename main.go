@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+
+	"gonum.org/v1/gonum/stat"
 )
 
 // Hp is Hyper Parameter
@@ -81,7 +83,7 @@ func (p *Policy) evaluate(input, delta [][]float64, direction string, hp Hp) [][
 
 func (p *Policy) sampleDeltas(inputSize, outputSize int, hp Hp) [][][]float64 {
 	var r [][][]float64
-	for i := 0; i < hp.nbDirection; i++ {
+	for i := 0; i < hp.nbDirections; i++ {
 		r = append(r, randomizeValue(outputSize, inputSize))
 	}
 	return r
@@ -94,12 +96,23 @@ func (p *Policy) update(inputSize, outputSize int) {
 func train(hp Hp, p Policy) {
 	for step := 0; step < hp.nbSteps; step++ {
 		// Initializing the pertubation deltas and the positive/negative rewards
-		deltas := p.sampleDeltas(nbInputs, nbOutputs, hp)
-		positiveRewards := zeros(1, hp.nbDirections)
-		negativeRewards := zeros(1, hp.nbDirections)
+		// deltas := p.sampleDeltas(nbInputs, nbOutputs, hp)
+		// positiveRewards := zeros(1, hp.nbDirections)
+		// negativeRewards := zeros(1, hp.nbDirections)
 
 		// Getting the positive rewards in the positive directions
+		for k := 0; k < hp.nbDirections; k++ {
+			// positiveRewards[0][k] = explore()
+		}
 
+		// Getting the negative rewards in the positive directions
+		for k := 0; k < hp.nbDirections; k++ {
+			// negativeRewards[0][k] = explore()
+		}
+
+		// Gathering all the positive/negative rewards to compute the standard deviation of these rewards
+		// Concat both into 1 array
+		// allRewards := concatArr(positiveRewards, negativeRewards)
 	}
 }
 
@@ -157,6 +170,16 @@ func main() {
 	r := p.evaluate(input, delta, direction, hp)
 	fmt.Println("action: ", r)
 	train(hp, p)
+
+	var mm1 = [][]float64{{-966.80775636, -944.54456444, -941.39167427, -908.57375676, -942.50477587,
+		-951.3645666, -909.90726117, -907.80823, -971.58509113, -956.02367439,
+		-961.6827609, -445.07480596, -961.58943846, -963.00084701, -969.89787205,
+		-965.95142945, -959.65110938, -875.6368449, -938.54339511, -954.19116807,
+		-958.78896575, -945.44521011, -939.4083488, -954.22280762, -974.53632688,
+		-955.28894524, -946.28926372, -949.71335999, -957.85133814, -899.48257535,
+		-959.12524539, -924.69444581}}
+
+	fmt.Println("std: ", std(mm1))
 
 }
 
@@ -231,6 +254,48 @@ func zerosAlpha(r int, c int) [][]float64 {
 	}
 
 	return v
+}
+
+func std(m1 [][]float64) float64 {
+	// var sum, mean, sd, d float64
+	// for _, v := range m1[0] {
+	// 	fmt.Println("value of v:", v)
+	// 	sum += v
+	// 	d++
+	// }
+	// mean = sum / d
+	// for _, v := range m1[0] {
+	// 	sd += math.Pow(v-mean, 2)
+	// }
+
+	// mean := stat.Mean(m1[0], nil)
+	variance := stat.Variance(m1[0], nil)
+	stddev := math.Sqrt(variance)
+
+	return stddev
+}
+
+func concatArr(m1 [][]float64, m2 [][]float64) [][]float64 {
+	c := make([][]float64, len(m1))
+	for i := 0; i < len(m1); i++ {
+		c[i] = make([]float64, len(m1[0])+len(m2[0]))
+	}
+
+	for i, v := range m1 {
+		for i2, v2 := range v {
+			c[i][i2] = v2
+		}
+	}
+
+	for i, v := range m2 {
+		for i2, v2 := range v {
+			c[i][len(m1[0])+i2] = v2
+		}
+	}
+
+	// r = append(r, randomizeValue(outputSize, inputSize))
+
+	return c
 }
 
 func sigmoidDeriv(m1 [][]float64) [][]float64 {

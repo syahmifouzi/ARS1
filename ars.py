@@ -14,7 +14,7 @@ class Hp():
     def __init__(self):
         self.nb_steps = 3
         # Max time we allow for the AI to walk on the field (free to try an error)
-        self.episode_length = 500
+        self.episode_length = 1000
         self.learning_rate = 0.02
         # The more directions, the higher chance of reward, but with a longer time to train
         self.nb_directions = 16
@@ -82,7 +82,7 @@ class Policy():
     
     def update(self, rollouts, sigma_r):
         step = np.zeros(self.theta.shape)
-        print('rollouts: ', rollouts)
+        ## print('rollouts: ', rollouts)
         for r_pos, r_neg, d in rollouts:
             step += (r_pos - r_neg) * d
         self.theta += hp.learning_rate / (hp.nb_best_directions * sigma_r) * step
@@ -134,20 +134,26 @@ def train(env, policy, normalizer, hp):
             ## print('deltas[', k,']: ', deltas[k])
             positive_rewards[k] = explore(env, normalizer, policy, direction = "positive", delta = deltas[k])
             ## print('positive_rewards[', k,']: ', positive_rewards[k])
-        ## print('positive_rewards: ', positive_rewards)
+        print('positive_rewards: ', positive_rewards)
             
         # Getting the negative rewards in the negative/positive directions
         for k in range(hp.nb_directions):
             negative_rewards[k] = explore(env, normalizer, policy, direction = "negative", delta = deltas[k])
+        print('negative_rewards: ', negative_rewards)
             
         # Gathering all the positive/negative rewards to compute the standard deviation of these rewards
         all_rewards = np.array(positive_rewards + negative_rewards)
+        print('all_rewards: ', all_rewards)
         sigma_r = all_rewards.std()
+        print('sigma_r: ', sigma_r)
         
         # Sorting the rollouts by the max(r_pos, r_neg) and selecting the best directions
         scores = {k:max(r_pos, r_neg) for k,(r_pos, r_neg) in enumerate(zip(positive_rewards, negative_rewards))}
+        print('scores: ', scores)
         order = sorted(scores.keys(), key = lambda x:scores[x])[:hp.nb_best_directions]
+        print('order: ', order)
         rollouts = [(positive_rewards[k], negative_rewards[k], deltas[k]) for k in order]
+        ## print('rollouts: ', rollouts)
         
         # Updating the policy
         policy.update(rollouts, sigma_r)

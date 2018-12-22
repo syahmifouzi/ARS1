@@ -84,8 +84,19 @@ class Policy():
         step = np.zeros(self.theta.shape)
         ## print('rollouts: ', rollouts)
         for r_pos, r_neg, d in rollouts:
+            ## print('r_pos B4: ', r_pos)
+            ## print('r_neg B4: ', r_neg)
+            ## print('d B4: ', d)
+            ## print('step B4: ', step)
             step += (r_pos - r_neg) * d
+            ## print('step AFTER: ', step)
+        print('self.theta B4: ', self.theta)
+        print('step: ', step)
+        print('sigma_r: ', sigma_r)
+        print('hp.learning_rate: ', hp.learning_rate)
+        print('hp.nb_best_directions: ', hp.nb_best_directions)
         self.theta += hp.learning_rate / (hp.nb_best_directions * sigma_r) * step
+        print('self.theta AFTER: ', self.theta)
         
 # Exploring the policy on one specific direction and over one episode
 # Because in one episode there will be many actions (ie. the motor, the gyrometer, other gyro, etc...)
@@ -106,9 +117,11 @@ def explore(env, normalizer, policy, direction = None, delta = None):
         ## print('action: ', action)
         # This pybullet library will return the next state, reward, is the episode is done, and 1 more...
         state, reward, done, _ = env.step(action)
-        ## print('state AFTER: ', state)
+        print('reward B4: ', reward)
         reward = max(min(reward, 1), -1)
+        print('reward AFTER: ', reward)
         sum_rewards += reward
+        print('sum_rewards: ', sum_rewards)
         num_plays += 1
     return sum_rewards
 
@@ -124,6 +137,7 @@ def train(env, policy, normalizer, hp):
         
         # Initializing the pertubation deltas and the positive/negative rewards
         deltas = policy.sample_deltas()
+        # Increase buffer size Spyder console -> https://stackoverflow.com/questions/26751140/spyder-ide-console-history
         ## print('deltas: ', deltas)
         positive_rewards = [0] * hp.nb_directions
         ## print('positive_rewards: ', positive_rewards)
@@ -134,24 +148,24 @@ def train(env, policy, normalizer, hp):
             ## print('deltas[', k,']: ', deltas[k])
             positive_rewards[k] = explore(env, normalizer, policy, direction = "positive", delta = deltas[k])
             ## print('positive_rewards[', k,']: ', positive_rewards[k])
-        print('positive_rewards: ', positive_rewards)
+        ## print('positive_rewards: ', positive_rewards)
             
         # Getting the negative rewards in the negative/positive directions
         for k in range(hp.nb_directions):
             negative_rewards[k] = explore(env, normalizer, policy, direction = "negative", delta = deltas[k])
-        print('negative_rewards: ', negative_rewards)
+        ## print('negative_rewards: ', negative_rewards)
             
         # Gathering all the positive/negative rewards to compute the standard deviation of these rewards
         all_rewards = np.array(positive_rewards + negative_rewards)
-        print('all_rewards: ', all_rewards)
+        ## print('all_rewards: ', all_rewards)
         sigma_r = all_rewards.std()
-        print('sigma_r: ', sigma_r)
+        ## print('sigma_r: ', sigma_r)
         
         # Sorting the rollouts by the max(r_pos, r_neg) and selecting the best directions
         scores = {k:max(r_pos, r_neg) for k,(r_pos, r_neg) in enumerate(zip(positive_rewards, negative_rewards))}
-        print('scores: ', scores)
+        ## print('scores: ', scores)
         order = sorted(scores.keys(), key = lambda x:scores[x])[:hp.nb_best_directions]
-        print('order: ', order)
+        ## print('order: ', order)
         rollouts = [(positive_rewards[k], negative_rewards[k], deltas[k]) for k in order]
         ## print('rollouts: ', rollouts)
         

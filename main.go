@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 
 	"gonum.org/v1/gonum/stat"
 )
@@ -22,6 +23,11 @@ type Normalizer struct {
 // Policy is the AI
 type Policy struct {
 	theta [][]float64
+}
+
+type rollouts struct {
+	rPos, rNeg float64
+	d          [][]float64
 }
 
 func (hp *Hp) init() {
@@ -89,103 +95,112 @@ func (p *Policy) sampleDeltas(inputSize, outputSize int, hp Hp) [][][]float64 {
 	return r
 }
 
-func (p *Policy) update(inputSize, outputSize int) {
+func (p *Policy) update(rollout []rollouts, sigmaR float64, hp Hp) {
 
+	step := zeros(len(rollout[0].d), len(rollout[0].d[0]))
+
+	for _, v := range rollout {
+		s1 := v.rPos - v.rNeg
+		s2 := darabN(v.d, s1)
+
+		step = tambah(step, s2)
+	}
+
+	ss1 := float64(hp.nbBestDirections) * sigmaR
+	ss1 = float64(hp.learningRate) / ss1
+	ss2 := darabN(step, ss1)
+
+	(*p).theta = tambah((*p).theta, ss2)
 }
 
-func train(hp Hp, p Policy) {
+func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delta [][]float64) float64 {
+	// I assume reset the robot leg to default
+	// state := env.reset()
+	var state [][]float64
+
+	done := false
+	var numPlays, sumRewards, reward float64
+
+	// Calculate the accumulate reward on the full episode
+	for !done && numPlays < float64(hp.episodeLength) {
+		normalizer.observe(state)
+		state = normalizer.normalize(state)
+		// action := policy.evaluate(state, delta, direction, hp)
+
+		// state, reward, done = env.step(action)
+
+		if reward < -1 {
+			reward = -1
+		} else if reward > 1 {
+			reward = 1
+		}
+		sumRewards += reward
+		numPlays++
+	}
+
+	return sumRewards
+}
+
+func train(hp Hp, p Policy, normalizer Normalizer, inputSize, outputSize int) {
 	for step := 0; step < hp.nbSteps; step++ {
 		// Initializing the pertubation deltas and the positive/negative rewards
-		// deltas := p.sampleDeltas(nbInputs, nbOutputs, hp)
-		// positiveRewards := zeros(1, hp.nbDirections)
-		// negativeRewards := zeros(1, hp.nbDirections)
+		deltas := p.sampleDeltas(inputSize, outputSize, hp)
+		positiveRewards := zeros(1, hp.nbDirections)
+		negativeRewards := zeros(1, hp.nbDirections)
 
 		// Getting the positive rewards in the positive directions
 		for k := 0; k < hp.nbDirections; k++ {
-			// positiveRewards[0][k] = explore()
+			positiveRewards[0][k] = explore(hp, normalizer, p, "positive", deltas[k])
 		}
 
 		// Getting the negative rewards in the positive directions
 		for k := 0; k < hp.nbDirections; k++ {
-			// negativeRewards[0][k] = explore()
+			negativeRewards[0][k] = explore(hp, normalizer, p, "negative", deltas[k])
 		}
 
 		// Gathering all the positive/negative rewards to compute the standard deviation of these rewards
 		// Concat both into 1 array
-		// allRewards := concatArr(positiveRewards, negativeRewards)
+		allRewards := concatArr(positiveRewards, negativeRewards)
 		// go lib for std might be a bit different than python
-		// sigmaR := std(allRewards)
+		sigmaR := std(allRewards)
 
 		// Sorting the rollouts by the max(r_pos, r_neg) and selecting the best directions
+		order := getOrder(positiveRewards, negativeRewards)
+		rollout := make([]rollouts, len(positiveRewards[0]))
+		for i, v := range order {
+			rollout[i].rPos = positiveRewards[0][v]
+			rollout[i].rNeg = negativeRewards[0][v]
+			rollout[i].d = deltas[v]
+		}
 
+		// Updating the policy
+		p.update(rollout, sigmaR, hp)
+
+		// Printing the final reward of the policy after the update
+		rewardEvaluation := explore(hp, normalizer, p, "none", deltas[0])
+		fmt.Println("Step:", step, "Rewards:", rewardEvaluation)
 	}
 }
 
 func main() {
+	fmt.Println("Start")
 
-	// hp := Hp{3, 1000, 16, 16, 0.02, 0.03}
 	hp := Hp{}
 	hp.init()
-	var nbInputs = 26
-	var nbOutputs = 6
+
+	// Number of input and output depend on our own gym
+	nbInputs := 26
+	nbOutputs := 6
+
+	policy := Policy{}
+	policy.init(nbInputs, nbOutputs)
+
 	normalizer := Normalizer{}
 	normalizer.init(nbInputs)
 
-	var input = [][]float64{{-0.27056041, 0., 0., -0.20892696, 0., 0.17776233,
-		-0., 0.31310795, 0.35891473, -0.06750051, -0.4259459, 0.01321563,
-		0.45592347, -0.08710772, 0.27216179, -0.09448055, 0.32598927, -0.07648785,
-		-0.25519671, 0.17547957, 0.33333333, 0.46534397, 0.41015156, 0.12751534,
-		-0.15681251, 0.34433738}}
+	train(hp, policy, normalizer, nbInputs, nbOutputs)
 
-	var delta = [][]float64{{-0.80217284, -0.44887781, -1.10593508, -1.65451545, -2.3634686, 1.13534535,
-		-1.01701414, 0.63736181, -0.85990661, 1.77260763, -1.11036305, 0.18121427,
-		0.56434487, -0.56651023, 0.7299756, 0.37299379, 0.53381091, -0.0919733,
-		1.91382039, 0.33079713, 1.14194252, -1.12959516, -0.85005238, 0.96082,
-		-0.21741818, 0.15851488},
-		{0.87341823, -0.11138337, -1.03803876, -1.00947983, -1.05825656, 0.65628408,
-			-0.06249159, -1.73865429, 0.103163, -0.62166685, 0.27571804, -1.09067489,
-			-0.60998525, 0.30641238, 1.69182613, -0.74795374, -0.58079722, -0.11075397,
-			2.04202875, 0.44752069, 0.68338423, 0.02288597, 0.85723427, 0.18393058,
-			-0.41611158, 1.25005005},
-		{1.24829979, -0.75767414, 0.58829416, 0.34685933, 1.3670327, 0.67371607,
-			-1.2915627, -0.84824392, -0.16659957, 0.91719602, 0.08025059, 0.22823877,
-			-0.8804768, 0.27812885, -0.07015677, 0.62958793, -1.81342356, 1.54744858,
-			0.32505743, -0.21191292, -1.54672407, 1.04520063, 1.01037548, 0.07083664,
-			0.71758983, -0.25070491},
-		{-0.05152993, 0.01312891, 0.20223906, 0.45495224, -0.39926817, 0.18106742,
-			0.80748795, 0.81253519, 0.21090203, 0.42177915, 0.58192518, -0.41020752,
-			2.2968661, 1.68849705, 0.62581147, -1.61136381, 0.06009774, 0.46242079,
-			0.68483649, -0.59546033, 0.99905124, -0.30817074, 0.36583834, 1.60750704,
-			-0.23817737, -0.34082828},
-		{0.48759421, 1.73907303, 0.0689698, 0.47324139, -0.65035502, -0.77910696,
-			-0.77766271, 0.6225628, 0.42756207, 0.0740096, -0.4531686, 0.60415364,
-			2.38520581, -0.12388333, -0.32419367, 0.31075423, 2.46162831, -0.31612369,
-			-1.81506277, 0.6842495, 0.03203253, 0.19627021, 0.90745116, -2.13483482,
-			0.81684718, 1.18417131},
-		{-0.20448056, -0.11084446, 1.41448273, -1.416645, 0.67351346, -0.77229442,
-			-0.09387704, -0.16977402, -0.54114463, 0.53794761, 0.39128265, 2.21191487,
-			-0.16224463, 0.29117816, 0.10806266, -0.19953292, 0.2328323, 0.15539326,
-			0.59372515, -1.35055772, 0.83056467, 0.11321804, -1.24274572, 1.59948307,
-			2.47441941, -0.33232485}}
-
-	direction := "positive"
-
-	p := Policy{}
-	p.init(nbInputs, nbOutputs)
-	r := p.evaluate(input, delta, direction, hp)
-	fmt.Println("action: ", r)
-	train(hp, p)
-
-	var mm1 = [][]float64{{-966.80775636, -944.54456444, -941.39167427, -908.57375676, -942.50477587,
-		-951.3645666, -909.90726117, -907.80823, -971.58509113, -956.02367439,
-		-961.6827609, -445.07480596, -961.58943846, -963.00084701, -969.89787205,
-		-965.95142945, -959.65110938, -875.6368449, -938.54339511, -954.19116807,
-		-958.78896575, -945.44521011, -939.4083488, -954.22280762, -974.53632688,
-		-955.28894524, -946.28926372, -949.71335999, -957.85133814, -899.48257535,
-		-959.12524539, -924.69444581}}
-
-	fmt.Println("std: ", std(mm1))
-
+	fmt.Println("End")
 }
 
 func randomizeValue(r int, c int) [][]float64 {
@@ -291,6 +306,41 @@ func concatArr(m1 [][]float64, m2 [][]float64) [][]float64 {
 	// r = append(r, randomizeValue(outputSize, inputSize))
 
 	return c
+}
+
+func getOrder(m1 [][]float64, m2 [][]float64) []int {
+
+	m := make(map[float64]int)
+
+	s := make([][]float64, len(m1))
+	for i := 0; i < len(m1); i++ {
+		s[i] = make([]float64, len(m1[0]))
+	}
+
+	k := 0
+	for i, v := range m1 {
+		for i2, v2 := range v {
+			if v2 > m2[i][i2] {
+				s[i][i2] = v2
+				m[v2] = k
+				k++
+			} else {
+				s[i][i2] = m2[i][i2]
+				m[m2[i][i2]] = k
+				k++
+			}
+		}
+	}
+	sort.Float64s(s[0])
+
+	var r []int
+
+	for _, val := range s[0] {
+		r = append(r, m[val])
+		// fmt.Println(m[val], val)
+	}
+	// fmt.Println(r)
+	return r
 }
 
 func sigmoidDeriv(m1 [][]float64) [][]float64 {

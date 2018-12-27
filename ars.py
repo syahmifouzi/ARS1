@@ -6,6 +6,7 @@ import numpy as np
 import gym
 from gym import wrappers
 import pybullet_envs
+import sys
 
 # Setting the Hyper Parameters
 
@@ -90,13 +91,13 @@ class Policy():
             ## print('step B4: ', step)
             step += (r_pos - r_neg) * d
             ## print('step AFTER: ', step)
-        print('self.theta B4: ', self.theta)
-        print('step: ', step)
-        print('sigma_r: ', sigma_r)
-        print('hp.learning_rate: ', hp.learning_rate)
-        print('hp.nb_best_directions: ', hp.nb_best_directions)
+        ## print('self.theta B4: ', self.theta)
+        ## print('step: ', step)
+        ## print('sigma_r: ', sigma_r)
+        ## print('hp.learning_rate: ', hp.learning_rate)
+        ## print('hp.nb_best_directions: ', hp.nb_best_directions)
         self.theta += hp.learning_rate / (hp.nb_best_directions * sigma_r) * step
-        print('self.theta AFTER: ', self.theta)
+        ## print('self.theta AFTER: ', self.theta)
         
 # Exploring the policy on one specific direction and over one episode
 # Because in one episode there will be many actions (ie. the motor, the gyrometer, other gyro, etc...)
@@ -105,6 +106,7 @@ class Policy():
 def explore(env, normalizer, policy, direction = None, delta = None):
     state = env.reset()
     ## print('state RESET: ', state)
+    
     done = False
     num_plays = 0.
     sum_rewards = 0
@@ -113,15 +115,17 @@ def explore(env, normalizer, policy, direction = None, delta = None):
         ## print('state B4: ', state)
         normalizer.observe(state)
         state = normalizer.normalize(state)
+        print('state: ', state)
         action = policy.evaluate(state, delta, direction)
-        ## print('action: ', action)
+        print('action: ', action)
+        sys.exit()
         # This pybullet library will return the next state, reward, is the episode is done, and 1 more...
         state, reward, done, _ = env.step(action)
-        print('reward B4: ', reward)
+        ## print('reward B4: ', reward)
         reward = max(min(reward, 1), -1)
-        print('reward AFTER: ', reward)
+        ## print('reward AFTER: ', reward)
         sum_rewards += reward
-        print('sum_rewards: ', sum_rewards)
+        ## print('sum_rewards: ', sum_rewards)
         num_plays += 1
     return sum_rewards
 

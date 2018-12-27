@@ -30,6 +30,10 @@ type rollouts struct {
 	d          [][]float64
 }
 
+type env struct {
+	nbInputs, nbOutputs int
+}
+
 func (hp *Hp) init() {
 	(*hp).nbSteps = 3
 	(*hp).episodeLength = 1000
@@ -113,6 +117,10 @@ func (p *Policy) update(rollout []rollouts, sigmaR float64, hp Hp) {
 	(*p).theta = tambah((*p).theta, ss2)
 }
 
+// RESET = 1x26
+// STATE = 1x26 (input)
+// ACTION = 1x6 (output)
+
 func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delta [][]float64) float64 {
 	// I assume reset the robot leg to default
 	// state := env.reset()
@@ -153,7 +161,7 @@ func train(hp Hp, p Policy, normalizer Normalizer, inputSize, outputSize int) {
 			positiveRewards[0][k] = explore(hp, normalizer, p, "positive", deltas[k])
 		}
 
-		// Getting the negative rewards in the positive directions
+		// Getting the negative rewards in the negative/positive directions
 		for k := 0; k < hp.nbDirections; k++ {
 			negativeRewards[0][k] = explore(hp, normalizer, p, "negative", deltas[k])
 		}
@@ -226,26 +234,6 @@ func randomizeValue(r int, c int) [][]float64 {
 	return v
 }
 
-// func initWeight() {
-// 	wa = randomizeValue(1, 1)
-// 	ua = randomizeValue(1, 1)
-// 	ba = zeros(1, 5)
-
-// 	// get the dimensions of matrix
-// 	// init neural network weights
-// 	wf = randomizeValue(1, 1)
-// 	uf = randomizeValue(1, 1)
-// 	bf = zeros(1, 5)
-
-// 	wi = randomizeValue(1, 1)
-// 	ui = randomizeValue(1, 1)
-// 	bi = zeros(1, 5)
-
-// 	wo = randomizeValue(1, 1)
-// 	uo = randomizeValue(1, 1)
-// 	bo = zeros(1, 5)
-// }
-
 func zeros(r int, c int) [][]float64 {
 	v := make([][]float64, r)
 	for i := 0; i < r; i++ {
@@ -255,21 +243,6 @@ func zeros(r int, c int) [][]float64 {
 	for i := 0; i < r; i++ {
 		for j := 0; j < c; j++ {
 			v[i][j] = 0
-		}
-	}
-
-	return v
-}
-
-func zerosAlpha(r int, c int) [][]float64 {
-	v := make([][]float64, r)
-	for i := 0; i < r; i++ {
-		v[i] = make([]float64, c)
-	}
-
-	for i := 0; i < r; i++ {
-		for j := 0; j < c; j++ {
-			// v[i][j] = alpha
 		}
 	}
 
@@ -341,88 +314,6 @@ func getOrder(m1 [][]float64, m2 [][]float64) []int {
 	}
 	// fmt.Println(r)
 	return r
-}
-
-func sigmoidDeriv(m1 [][]float64) [][]float64 {
-
-	output := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		output[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			output[i][i2] = v2 * (1 - v2)
-		}
-	}
-
-	return output
-}
-
-func sigmoid(m1 [][]float64) [][]float64 {
-
-	output := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		output[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			var nX float64
-			nX = 0 - v2
-			output[i][i2] = 1 / (1 + math.Exp(nX))
-		}
-	}
-
-	return output
-}
-
-func tanH(m1 [][]float64) [][]float64 {
-
-	output := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		output[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			output[i][i2] = math.Tanh(v2)
-		}
-	}
-
-	return output
-}
-
-func tanHDeriv(m1 [][]float64) [][]float64 {
-
-	output := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		output[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			output[i][i2] = 1 - math.Pow(math.Tanh(v2), 2)
-		}
-	}
-
-	return output
-}
-
-func oneMinusSquare(m1 [][]float64) [][]float64 {
-
-	output := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		output[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			output[i][i2] = 1 - math.Pow(v2, 2)
-		}
-	}
-
-	return output
 }
 
 func dot(m1 [][]float64, m2 [][]float64) [][]float64 {
@@ -591,35 +482,6 @@ func sqrt(m1 [][]float64) [][]float64 {
 	for i, v := range m1 {
 		for i2, v2 := range v {
 			s[i][i2] = math.Sqrt(v2)
-		}
-	}
-
-	return s
-}
-
-func softmax(m1 [][]float64) [][]float64 {
-
-	sumZExp := 0.00
-	s := make([][]float64, len(m1))
-	for i := 0; i < len(m1); i++ {
-		s[i] = make([]float64, len(m1[0]))
-	}
-
-	for i, v := range m1 {
-		for i2, v2 := range v {
-			s[i][i2] = math.Exp(v2)
-		}
-	}
-
-	for _, v := range s {
-		for _, v2 := range v {
-			sumZExp += v2
-		}
-	}
-
-	for i, v := range s {
-		for i2, v2 := range v {
-			s[i][i2] = v2 / sumZExp
 		}
 	}
 

@@ -13,7 +13,7 @@ import sys
 class Hp():
     
     def __init__(self):
-        self.nb_steps = 3
+        self.nb_steps = 1000
         # Max time we allow for the AI to walk on the field (free to try an error)
         self.episode_length = 1000
         self.learning_rate = 0.02
@@ -67,6 +67,9 @@ class Policy():
         
     def evaluate(self, input, delta = None, direction = None):
         if direction is None:
+            ## print('self.theta: ', self.theta)
+            ## print('input: ', input)
+            ## sys.exit()
             return self.theta.dot(input)
         elif direction == "positive":
             return (self.theta + hp.noise*delta).dot(input)
@@ -115,10 +118,10 @@ def explore(env, normalizer, policy, direction = None, delta = None):
         ## print('state B4: ', state)
         normalizer.observe(state)
         state = normalizer.normalize(state)
-        print('state: ', state)
+        ## print('state: ', state)
         action = policy.evaluate(state, delta, direction)
-        print('action: ', action)
-        sys.exit()
+        ## print('action: ', action)
+        
         # This pybullet library will return the next state, reward, is the episode is done, and 1 more...
         state, reward, done, _ = env.step(action)
         ## print('reward B4: ', reward)
@@ -127,6 +130,7 @@ def explore(env, normalizer, policy, direction = None, delta = None):
         sum_rewards += reward
         ## print('sum_rewards: ', sum_rewards)
         num_plays += 1
+        ## sys.exit()
     return sum_rewards
 
 # Training AI

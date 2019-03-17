@@ -1,14 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
-	"os"
 	"sort"
-	"strconv"
 
 	"gonum.org/v1/gonum/stat"
 )
@@ -39,7 +35,7 @@ type env struct {
 }
 
 func (hp *Hp) init() {
-	(*hp).nbSteps = 100
+	(*hp).nbSteps = 3
 	(*hp).episodeLength = 1000
 	(*hp).nbDirections = 16
 	(*hp).nbBestDirections = 16
@@ -83,25 +79,14 @@ func (p *Policy) init(inputSize, outputSize int) {
 func (p *Policy) evaluate(input, delta [][]float64, direction string, hp Hp) [][]float64 {
 	switch direction {
 	case "none":
-		// fmt.Println("none")
-		// fmt.Println("input", input)
-		// fmt.Println("theta", (*p).theta)
-		return dot(input, transpose((*p).theta))
+		return dot(input, (*p).theta)
 	case "positive":
 		r := darabN(delta, hp.noise)
 		r = tambah((*p).theta, r)
-		// fmt.Println("POS")
-		// fmt.Println("input", input)
-		// fmt.Println("theta", (*p).theta)
-		// fmt.Println("transpose(r)", transpose(r))
 		return dot(input, transpose(r))
 	default:
 		r := darabN(delta, hp.noise)
 		r = tolak((*p).theta, r)
-		// fmt.Println("NEG")
-		// fmt.Println("input", input)
-		// fmt.Println("theta", (*p).theta)
-		// fmt.Println("transpose(r)", transpose(r))
 		return dot(input, transpose(r))
 	}
 }
@@ -132,87 +117,14 @@ func (p *Policy) update(rollout []rollouts, sigmaR float64, hp Hp) {
 	(*p).theta = tambah((*p).theta, ss2)
 }
 
-func readIn() float64 {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	if scanner.Err() != nil {
-		// handle error.
-		log.Fatalln(scanner.Err())
-	}
-
-	var s float64
-
-	s, err := strconv.ParseFloat(scanner.Text(), 64)
-
-	if err != nil {
-		// handle error.
-		log.Fatalln(err)
-	}
-
-	return s
-}
-
-func gym(action [][]float64) ([][]float64, float64, bool) {
-	// to compile the state into array later
-	r := 1
-	c := 5
-	v := make([][]float64, r)
-	for i := 0; i < r; i++ {
-		v[i] = make([]float64, c)
-	}
-	// v[i][j] = 0
-
-	// Slot buat ACTION begin (gerakkan motor)
-
-	leftM := action[0][0]
-	rightM := action[0][1]
-
-	// fmt.Println("motor left:", leftM)
-	// fmt.Println("motor right:", rightM)
-
-	// Slot buat ACTION end
-
-	// Sekarang read sensor condition aka STATE
-	// fmt.Print("Insert S1: ")
-	v[0][0] = 0
-	// fmt.Print("Insert S2: ")
-	v[0][1] = 0
-	// fmt.Print("Insert S3: ")
-	v[0][2] = 1
-	// fmt.Print("Insert S4: ")
-	v[0][3] = 0
-	// fmt.Print("Insert S5: ")
-	v[0][4] = 0
-
-	// Then decide the rewards
-	// it is hard to reach 900
-	var reward float64
-	// fmt.Print("Insert Reward: ")
-	if leftM < 0 && rightM < 0 {
-		reward = -10
-	} else if leftM == 0 && rightM == 0 {
-		reward = -10
-	} else if v[0][0] == 0 && v[0][1] == 0 && v[0][2] == 1 && v[0][3] == 0 && v[0][4] == 0 && leftM > 1 && rightM > 1 {
-		reward = 20
-	} else {
-		reward = 2*rand.Float64() - 1
-	}
-
-	// Decide if it is done
-	done := false
-	fmt.Println("reward:", reward)
-
-	return v, reward, done
-}
-
-// RESET = 1x5
-// STATE = 1x5 (input)
-// ACTION = 1x2 (output)
+// RESET = 1x26
+// STATE = 1x26 (input)
+// ACTION = 1x6 (output)
 
 func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delta [][]float64) float64 {
 	// I assume reset the robot leg to default
 	// state := env.reset()
-	state := zeros(1, 5)
+	var state [][]float64
 
 	done := false
 	var numPlays, sumRewards, reward float64
@@ -221,11 +133,9 @@ func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delt
 	for !done && numPlays < float64(hp.episodeLength) {
 		normalizer.observe(state)
 		state = normalizer.normalize(state)
-		action := policy.evaluate(state, delta, direction, hp)
+		// action := policy.evaluate(state, delta, direction, hp)
 
-		fmt.Println("action:", action)
-
-		state, reward, done = gym(action)
+		// state, reward, done = env.step(action)
 
 		if reward < -1 {
 			reward = -1
@@ -234,9 +144,7 @@ func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delt
 		}
 		sumRewards += reward
 		numPlays++
-		// fmt.Println("numPlays", numPlays)
 	}
-	// fmt.Println("DONE")
 
 	return sumRewards
 }
@@ -289,8 +197,8 @@ func main() {
 	hp.init()
 
 	// Number of input and output depend on our own gym
-	nbInputs := 5
-	nbOutputs := 2
+	nbInputs := 26
+	nbOutputs := 6
 
 	policy := Policy{}
 	policy.init(nbInputs, nbOutputs)

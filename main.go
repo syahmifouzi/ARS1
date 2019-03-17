@@ -13,6 +13,25 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
+/*
+Example reward calculation
+def _step(self, action):
+	xposbefore = self.model.data.qpos[0, 0]
+	self.do_simulation(action, self.frame_skip)
+	xposafter = self.model.data.qpos[0, 0]
+	ob = self._get_obs()
+	reward_ctrl = - 0.1 * np.square(action).sum()
+	reward_run = (xposafter - xposbefore)/self.dt
+	reward = reward_ctrl + reward_run
+	done = False
+	return ob, reward, done, dict(reward_run=reward_run, reward_ctrl=reward_ctrl)
+
+Another reference:
+https://towardsdatascience.com/openai-gym-from-scratch-619e39af121f
+set proportinality to determine a good/bad reward
+
+*/
+
 // Hp is Hyper Parameter
 type Hp struct {
 	nbSteps, episodeLength, nbDirections, nbBestDirections int

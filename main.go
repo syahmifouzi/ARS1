@@ -58,8 +58,8 @@ type env struct {
 }
 
 func (hp *Hp) init() {
-	(*hp).nbSteps = 100
-	(*hp).episodeLength = 1000
+	(*hp).nbSteps = 5
+	(*hp).episodeLength = 5
 	(*hp).nbDirections = 16
 	(*hp).nbBestDirections = 16
 	(*hp).learningRate = 0.02
@@ -173,8 +173,9 @@ func readIn() float64 {
 
 func gym(action [][]float64) ([][]float64, float64, bool) {
 	// to compile the state into array later
+	// CHANGE HERE!
 	r := 1
-	c := 5
+	c := 7
 	v := make([][]float64, r)
 	for i := 0; i < r; i++ {
 		v[i] = make([]float64, c)
@@ -182,7 +183,7 @@ func gym(action [][]float64) ([][]float64, float64, bool) {
 	// v[i][j] = 0
 
 	// Slot buat ACTION begin (gerakkan motor)
-
+	// CHANGE HERE!
 	leftM := action[0][0]
 	rightM := action[0][1]
 
@@ -231,7 +232,8 @@ func gym(action [][]float64) ([][]float64, float64, bool) {
 func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delta [][]float64) float64 {
 	// I assume reset the robot leg to default
 	// state := env.reset()
-	state := zeros(1, 5)
+	// CHANGE HERE!
+	state := zeros(1, 7)
 
 	done := false
 	var numPlays, sumRewards, reward float64
@@ -308,7 +310,8 @@ func main() {
 	hp.init()
 
 	// Number of input and output depend on our own gym
-	nbInputs := 5
+	// CHANGE HERE!
+	nbInputs := 7
 	nbOutputs := 2
 
 	policy := Policy{}

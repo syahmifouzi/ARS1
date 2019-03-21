@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
@@ -31,6 +33,12 @@ https://towardsdatascience.com/openai-gym-from-scratch-619e39af121f
 set proportinality to determine a good/bad reward
 
 */
+
+var thetaToWrite [][]float64
+var nToWrite [][]float64
+var meanToWrite [][]float64
+var meanDiffToWrite [][]float64
+var varianceToWrite [][]float64
 
 // Hp is Hyper Parameter
 type Hp struct {
@@ -85,6 +93,11 @@ func (nm *Normalizer) observe(x [][]float64) {
 	variance1 := bahagi((*nm).meanDiff, (*nm).n)
 	variance1 = clipMin(variance1, 1e-2)
 	(*nm).variance = variance1
+
+	nToWrite = (*nm).n
+	meanToWrite = (*nm).mean
+	meanDiffToWrite = (*nm).meanDiff
+	varianceToWrite = (*nm).variance
 }
 
 func (nm *Normalizer) normalize(inputs [][]float64) [][]float64 {
@@ -149,6 +162,10 @@ func (p *Policy) update(rollout []rollouts, sigmaR float64, hp Hp) {
 	ss2 := darabN(step, ss1)
 
 	(*p).theta = tambah((*p).theta, ss2)
+
+	// fmt.Println("p.Theta:", (*p).theta)
+
+	thetaToWrite = (*p).theta
 }
 
 func readIn() float64 {
@@ -220,7 +237,7 @@ func gym(action [][]float64) ([][]float64, float64, bool) {
 
 	// Decide if it is done
 	done := false
-	fmt.Println("reward:", reward)
+	// fmt.Println("reward:", reward)
 
 	return v, reward, done
 }
@@ -244,7 +261,7 @@ func explore(hp Hp, normalizer Normalizer, policy Policy, direction string, delt
 		state = normalizer.normalize(state)
 		action := policy.evaluate(state, delta, direction, hp)
 
-		fmt.Println("action:", action)
+		// fmt.Println("action:", action)
 
 		state, reward, done = gym(action)
 
@@ -322,7 +339,195 @@ func main() {
 
 	train(hp, policy, normalizer, nbInputs, nbOutputs)
 
+	memoTheta()
+	memoN()
+	memoMean()
+	memoMeanDiff()
+	memoVariance()
+
 	fmt.Println("End")
+}
+
+func memoTheta() {
+	db := "./memory/theta.json"
+	s := "{\"theta\":["
+
+	// s := fmt.Sprintf("%f", (*p).theta[0][0])
+
+	for i := 0; i < len(thetaToWrite); i++ {
+		s = s + "["
+		for j := 0; j < len(thetaToWrite[0]); j++ {
+			temp := strconv.FormatFloat(thetaToWrite[i][j], 'f', -1, 64)
+			s = s + temp
+			if j != len(thetaToWrite[0])-1 {
+				s = s + ","
+			}
+		}
+		s = s + "]"
+		if i != len(thetaToWrite)-1 {
+			s = s + ","
+		}
+	}
+
+	s = s + "]}"
+
+	var result map[string]interface{}
+	var err error
+	if err = json.Unmarshal([]byte(s), &result); err != nil {
+		log.Fatalln(err)
+	}
+	var b []byte
+	b, err = json.Marshal(result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = ioutil.WriteFile(db, b, 0644); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func memoN() {
+	db := "./memory/n.json"
+	s := "{\"n\":["
+
+	for i := 0; i < len(nToWrite); i++ {
+		s = s + "["
+		for j := 0; j < len(nToWrite[0]); j++ {
+			temp := strconv.FormatFloat(nToWrite[i][j], 'f', -1, 64)
+			s = s + temp
+			if j != len(nToWrite[0])-1 {
+				s = s + ","
+			}
+		}
+		s = s + "]"
+		if i != len(nToWrite)-1 {
+			s = s + ","
+		}
+	}
+
+	s = s + "]}"
+
+	var result map[string]interface{}
+	var err error
+	if err = json.Unmarshal([]byte(s), &result); err != nil {
+		log.Fatalln(err)
+	}
+	var b []byte
+	b, err = json.Marshal(result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = ioutil.WriteFile(db, b, 0644); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func memoMean() {
+	db := "./memory/mean.json"
+	s := "{\"mean\":["
+
+	for i := 0; i < len(meanToWrite); i++ {
+		s = s + "["
+		for j := 0; j < len(meanToWrite[0]); j++ {
+			temp := strconv.FormatFloat(meanToWrite[i][j], 'f', -1, 64)
+			s = s + temp
+			if j != len(meanToWrite[0])-1 {
+				s = s + ","
+			}
+		}
+		s = s + "]"
+		if i != len(meanToWrite)-1 {
+			s = s + ","
+		}
+	}
+
+	s = s + "]}"
+
+	var result map[string]interface{}
+	var err error
+	if err = json.Unmarshal([]byte(s), &result); err != nil {
+		log.Fatalln(err)
+	}
+	var b []byte
+	b, err = json.Marshal(result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = ioutil.WriteFile(db, b, 0644); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func memoMeanDiff() {
+	db := "./memory/meanDiff.json"
+	s := "{\"meanDiff\":["
+
+	for i := 0; i < len(meanDiffToWrite); i++ {
+		s = s + "["
+		for j := 0; j < len(meanDiffToWrite[0]); j++ {
+			temp := strconv.FormatFloat(meanDiffToWrite[i][j], 'f', -1, 64)
+			s = s + temp
+			if j != len(meanDiffToWrite[0])-1 {
+				s = s + ","
+			}
+		}
+		s = s + "]"
+		if i != len(meanDiffToWrite)-1 {
+			s = s + ","
+		}
+	}
+
+	s = s + "]}"
+
+	var result map[string]interface{}
+	var err error
+	if err = json.Unmarshal([]byte(s), &result); err != nil {
+		log.Fatalln(err)
+	}
+	var b []byte
+	b, err = json.Marshal(result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = ioutil.WriteFile(db, b, 0644); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func memoVariance() {
+	db := "./memory/variance.json"
+	s := "{\"variance\":["
+
+	for i := 0; i < len(varianceToWrite); i++ {
+		s = s + "["
+		for j := 0; j < len(varianceToWrite[0]); j++ {
+			temp := strconv.FormatFloat(varianceToWrite[i][j], 'f', -1, 64)
+			s = s + temp
+			if j != len(varianceToWrite[0])-1 {
+				s = s + ","
+			}
+		}
+		s = s + "]"
+		if i != len(varianceToWrite)-1 {
+			s = s + ","
+		}
+	}
+
+	s = s + "]}"
+
+	var result map[string]interface{}
+	var err error
+	if err = json.Unmarshal([]byte(s), &result); err != nil {
+		log.Fatalln(err)
+	}
+	var b []byte
+	b, err = json.Marshal(result)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = ioutil.WriteFile(db, b, 0644); err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func randomizeValue(r int, c int) [][]float64 {

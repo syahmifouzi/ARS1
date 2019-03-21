@@ -1,0 +1,37 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+)
+
+var memo MemoryInit
+
+// MemoryInit ...
+type MemoryInit struct {
+	Mean     [][]float64 `json:"mean"`
+	MeanDiff [][]float64 `json:"meanDiff"`
+	N        [][]float64 `json:"n"`
+	Theta    [][]float64 `json:"theta"`
+	Variance [][]float64 `json:"variance"`
+}
+
+func main() {
+	db := "./memory/memory.json"
+	content, err := ioutil.ReadFile(db)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// fmt.Println("content:", content)
+	if err = json.Unmarshal(content, &memo); err != nil {
+		log.Fatalln(err)
+	}
+
+	var test [][]float64
+
+	test = memo.Theta
+
+	fmt.Println("theta:", test)
+}
